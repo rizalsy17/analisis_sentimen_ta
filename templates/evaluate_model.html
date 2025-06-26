@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Evaluasi Model - {{ folder_name }}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <nav class="bg-blue-600 text-white shadow-md">
+        <div class="container mx-auto px-4 py-3">
+            <div class="flex justify-between items-center">
+                <div class="font-bold text-xl">Sentimen Analyzer</div>
+                <div>
+                    <a href="/" class="hover:text-blue-200">
+                        <i class="fas fa-home mr-1"></i> Home
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mx-auto px-4 py-8">
+        <div class="mb-8">
+            <h1 class="text-3xl font-bold text-gray-800 mb-2">Evaluasi Model: {{ folder_name }}</h1>
+            <p class="text-gray-600">Evaluasi performa model analisis sentimen</p>
+        </div>
+
+        <!-- Alert Messages -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="mb-4 {% if category == 'error' %}bg-red-100 text-red-800 border-red-300{% else %}bg-green-100 text-green-800 border-green-300{% endif %} border px-4 py-3 rounded-md">
+                        {% if category == 'error' %}
+                            <i class="fas fa-exclamation-circle mr-2"></i>
+                        {% else %}
+                            <i class="fas fa-check-circle mr-2"></i>
+                        {% endif %}
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <!-- Model Information -->
+        <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Informasi Model</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="border-b pb-2">
+                    <span class="text-gray-600">ID Model:</span>
+                    <span class="font-medium">{{ folder_id }}</span>
+                </div>
+                <div class="border-b pb-2">
+                    <span class="text-gray-600">Nama Model:</span>
+                    <span class="font-medium">{{ folder_name }}</span>
+                </div>
+                <div class="border-b pb-2">
+                    <span class="text-gray-600">Ukuran Data Training:</span>
+                    <span class="font-medium">{{ metadata.get('data_size', 'Tidak diketahui') }}</span>
+                </div>
+                <div class="border-b pb-2">
+                    <span class="text-gray-600">Tanggal Training:</span>
+                    <span class="font-medium">{{ metadata.get('training_date', 'Tidak diketahui') }}</span>
+                </div>
+                <div class="border-b pb-2 col-span-2">
+                    <span class="text-gray-600">Kelas:</span>
+                    <span class="font-medium">{{ ', '.join(metadata.get('classes', ['positif', 'netral', 'negatif'])) }}</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Evaluation Form -->
+        <div class="bg-white shadow-md rounded-lg p-6 mb-6">
+            <h2 class="text-xl font-semibold mb-4 text-gray-800">Upload Data Evaluasi</h2>
+            <form action="{{ url_for('run_evaluation', folder_id=folder_id) }}" method="post" enctype="multipart/form-data">
+                <div class="mb-4">
+                    <label class="block text-gray-700 mb-2">Upload File JSON untuk Evaluasi:</label>
+                    <input type="file" name="test_file" accept=".json" 
+                        class="block w-full px-4 py-2 text-sm text-gray-700 bg-white border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500">
+                    <p class="text-gray-500 text-sm mt-1">Format file harus JSON dengan struktur: [{"text": "teks1", "label": "positif"}, ...]</p>
+                </div>
+                <button type="submit" class="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50">
+                    <i class="fas fa-play mr-2"></i>Jalankan Evaluasi
+                </button>
+            </form>
+        </div>
+
+        <!-- Evaluation Results -->
+        {% if evaluation %}
+        <div class="bg-white shadow-md rounded-lg p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-xl font-semibold text-gray-800">Hasil Evaluasi Model</h2>
+                <div class="text-gray-500">
+                    <i class="far fa-calendar-alt mr-1"></i>{{ evaluation.timestamp }}
+                </div>
+            </div>
+            
+            <!-- Metrics -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-blue-50 p-4 rounded-md">
+                    <div class="text-lg font-semibold text-blue-600">{{ (evaluation.accuracy * 100) | round(2) }}%</div>
+                    <div class="text-gray-600">Akurasi</div>
+                </div>
+                <div class="bg-green-50 p-4 rounded-md">
+                    <div class="text-lg font-semibold text-green-600">{{ (evaluation.precision * 100) | round(2) }}%</div>
+                    <div class="text-gray-600">Presisi</div>
+                </div>
+                <div class="bg-indigo-50 p-4 rounded-md">
+                    <div class="text-lg font-semibold text-indigo-600">{{ (evaluation.recall * 100) | round(2) }}%</div>
+                    <div class="text-gray-600">Recall</div>
+                </div>
+                <div class="bg-purple-50 p-4 rounded-md">
+                    <div class="text-lg font-semibold text-purple-600">{{ (evaluation.f1_score * 100) | round(2) }}%</div>
+                    <div class="text-gray-600">F1 Score</div>
+                </div>
+            </div>
+
+            <!-- Confusion Matrix -->
+            <h3 class="text-lg font-medium text-gray-800 mb-3">Confusion Matrix</h3>
+            <div class="overflow-x-auto">
+                <table class="min-w-full bg-white border border-gray-200">
+                    <thead>
+                        <tr>
+                            <th class="py-2 px-4 border-b"></th>
+                            <th class="py-2 px-4 border-b text-center bg-gray-50" colspan="3">Prediksi</th>
+                        </tr>
+                        <tr>
+                            <th class="py-2 px-4 border-b"></th>
+                            <th class="py-2 px-4 border-b text-center">Positif</th>
+                            <th class="py-2 px-4 border-b text-center">Netral</th>
+                            <th class="py-2 px-4 border-b text-center">Negatif</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td class="py-2 px-4 border-b font-medium bg-gray-50" rowspan="3">Aktual</td>
+                            <td class="py-2 px-4 border-b text-center">{{ evaluation.confusion_matrix[0][0] }}</td>
+                            <td class="py-2 px-4 border-b text-center">{{ evaluation.confusion_matrix[0][1] }}</td>
+                            <td class="py-2 px-4 border-b text-center">{{ evaluation.confusion_matrix[0][2] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 px-4 border-b text-center">{{ evaluation.confusion_matrix[1][0] }}</td>
+                            <td class="py-2 px-4 border-b text-center">{{ evaluation.confusion_matrix[1][1] }}</td>
+                            <td class="py-2 px-4 border-b text-center">{{ evaluation.confusion_matrix[1][2] }}</td>
+                        </tr>
+                        <tr>
+                            <td class="py-2 px-4 border-b text-center">{{ evaluation.confusion_matrix[2][0] }}</td>
+                            <td class="py-2 px-4 border-b text-center">{{ evaluation.confusion_matrix[2][1] }}</td>
+                            <td class="py-2 px-4 border-b text-center">{{ evaluation.confusion_matrix[2][2] }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Test Size -->
+            <div class="mt-4 text-gray-600">
+                <i class="fas fa-chart-bar mr-1"></i>Ukuran Data Tes: <span class="font-medium">{{ evaluation.test_size }}</span> sampel
+            </div>
+        </div>
+        {% else %}
+        <div class="bg-white shadow-md rounded-lg p-6 text-center">
+            <div class="text-gray-500 py-8">
+                <i class="fas fa-chart-line text-4xl mb-4 text-gray-400"></i>
+                <p class="text-lg">Belum ada data evaluasi tersedia.</p>
+                <p class="text-sm mt-2">Upload file data tes untuk mengevaluasi performa model.</p>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <footer class="bg-gray-800 text-white mt-8 py-6">
+        <div class="container mx-auto px-4">
+            <div class="text-center">
+                <p>&copy; 2025 Sentiment Analyzer. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+</body>
+</html>

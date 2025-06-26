@@ -1,0 +1,1650 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Analisis Sentimen Data</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    body {
+      background-color: #f5f7ff;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .card {
+      background-color: white;
+      border-radius: 1rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+    .table-container {
+      overflow-x: auto;
+      max-height: 500px;
+      overflow-y: auto;
+      border-radius: 0.5rem;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 0.75rem 1rem;
+      text-align: left;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    th {
+      position: sticky;
+      top: 0;
+      background-color: #f8fafc;
+      z-index: 10;
+      color: #6b7280;
+      font-weight: 500;
+    }
+    thead {
+      background-color: #f8fafc;
+    }
+    tr:hover {
+      background-color: #f1f5f9;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 0.5rem;
+      padding: 0.5rem 1rem;
+      font-weight: 500;
+      transition: all 0.2s;
+    }
+    .btn-primary {
+      background-color: #a855f7;
+      color: white;
+    }
+    .btn-primary:hover {
+      background-color: #9333ea;
+    }
+    .btn-secondary {
+      background-color: #22c55e;
+      color: white;
+    }
+    .btn-secondary:hover {
+      background-color: #16a34a;
+    }
+    .sentiment-positif {
+      background-color: #dcfce7;
+      color: #166534;
+      border-radius: 9999px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    .sentiment-netral {
+      background-color: #e2e8f0;
+      color: #475569;
+      border-radius: 9999px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    .sentiment-negatif {
+      background-color: #fee2e2;
+      color: #b91c1c;
+      border-radius: 9999px;
+      padding: 0.25rem 0.75rem;
+      font-size: 0.875rem;
+      font-weight: 500;
+    }
+    .chart-container {
+      height: 300px;
+      width: 100%;
+    }
+    .probability-bar {
+      height: 8px;
+      border-radius: 4px;
+      margin-top: 4px;
+    }
+    .probability-bar-positif {
+      background-color: #22c55e;
+    }
+    .probability-bar-netral {
+      background-color: #94a3b8;
+    }
+    .probability-bar-negatif {
+      background-color: #ef4444;
+    }
+    .dataset-badge {
+      font-size: 0.75rem;
+      padding: 0.125rem 0.5rem;
+      border-radius: 9999px;
+      font-weight: 500;
+    }
+    .dataset-training {
+      background-color: #dbeafe;
+      color: #1e40af;
+    }
+    .dataset-testing {
+      background-color: #fef3c7;
+      color: #92400e;
+    }
+    .tab-button {
+      padding: 0.5rem 1rem;
+      font-weight: 500;
+      border-radius: 0.5rem 0.5rem 0 0;
+      transition: all 0.2s;
+    }
+    .tab-button.active {
+      background-color: white;
+      color: #a855f7;
+      border-bottom: 2px solid #a855f7;
+    }
+    .tab-button:not(.active) {
+      background-color: #f3f4f6;
+      color: #6b7280;
+    }
+    .tab-button:hover:not(.active) {
+      background-color: #e5e7eb;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .progress-bar {
+      height: 1.5rem;
+      border-radius: 0.75rem;
+      overflow: hidden;
+    }
+    .progress-bar-positif {
+      background-color: #22c55e;
+    }
+    .progress-bar-netral {
+      background-color: #94a3b8;
+    }
+    .progress-bar-negatif {
+      background-color: #ef4444;
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="container mx-auto px-4 py-10">
+    <h1 class="text-2xl font-medium text-center text-purple-500 mb-6">Analisis Sentimen Data</h1>
+    
+    <div class="mb-4 flex justify-between items-center">
+      <a href="/preview-data" class="text-purple-500 hover:text-purple-700 flex items-center">
+        <svg class="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+        </svg>
+        Kembali ke Preview Data
+      </a>
+      
+      <div class="flex space-x-3">
+        <button onclick="window.print()" class="btn btn-secondary">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path>
+          </svg>
+          Cetak
+        </button>
+        
+        <button onclick="exportToExcel()" class="btn btn-primary">
+          <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path>
+          </svg>
+          Export Excel
+        </button>
+
+      
+    <button onclick="exportTabelToPDF()" class="bg-purple-600 text-white px-4 py-2 rounded-md hover:bg-purple-700">
+      Export Semua PDF
+    </button>
+        
+      </div>
+    </div>
+    
+    <!-- Train-Test Split Information -->
+    <div class="card p-6 mb-8">
+      <h2 class="text-xl font-semibold mb-4 text-purple-600">Metode Analisis</h2>
+      <div class="bg-blue-50 p-4 rounded-lg mb-4">
+        <div class="flex items-start">
+          <svg class="w-6 h-6 text-blue-500 mr-3 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          <div>
+            <h3 class="font-medium text-blue-800">Train-Test Split (80/20)</h3>
+            <p class="text-blue-700 mt-1">
+              Data dibagi menjadi 80% data training dan 20% data testing untuk setiap folder. 
+              Model Naive Bayes dilatih menggunakan data training, kemudian diuji pada data testing 
+              untuk mengukur performa model.
+            </p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div>
+          <h3 class="font-medium text-gray-700 mb-2">Data Training (80%)</h3>
+          <div class="bg-blue-50 p-4 rounded-lg">
+            <p class="text-sm text-gray-600 mb-2">
+              Data training digunakan untuk melatih model Naive Bayes. Model belajar dari pola kata-kata 
+              dan hubungannya dengan sentimen untuk membuat prediksi yang akurat.
+            </p>
+            <div class="flex items-center justify-between">
+              <!-- <span class="font-medium">Total data training:</span>
+              {% set train_total = 0 %}
+              {% set train_positif = 0 %}
+              {% set train_netral = 0 %}
+              {% set train_negatif = 0 %}
+
+              {% for folder in train_summary %}
+                {% set train_total = train_total + train_summary[folder]['total'] %}
+                {% set train_positif = train_positif + train_summary[folder]['positif'] %}
+                {% set train_netral = train_netral + train_summary[folder]['netral'] %}
+                {% set train_negatif = train_negatif + train_summary[folder]['negatif'] %}
+              {% endfor %}
+              <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-medium">
+                {{ train_total }} data
+              </span> -->
+              
+            </div>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="font-medium text-gray-700 mb-2">Data Testing (20%)</h3>
+          <div class="bg-yellow-50 p-4 rounded-lg">
+            <p class="text-sm text-gray-600 mb-2">
+              Data testing digunakan untuk mengevaluasi performa model. Hasil prediksi pada data testing 
+              menunjukkan seberapa baik model dapat menggeneralisasi pada data baru.
+            </p>
+            <div class="flex items-center justify-between">
+              <!-- <span class="font-medium">Total data testing:</span>
+              {% set test_total = 0 %}
+              {% for folder in test_summary %}
+                {% set test_total = test_total + test_summary[folder]['total'] %}
+              {% endfor %}
+              <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full text-sm font-medium">
+                {{ test_total }} data
+              </span> -->
+                            
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Grouped Results Section -->
+    <div class="card p-6 mb-8">
+      <h2 class="text-xl font-semibold mb-4 text-purple-600">Hasil Analisis Berdasarkan Kelompok</h2>
+      
+      <div class="flex mb-4 border-b">
+        <button class="tab-button active" data-tab="grouped-dosen">Pembelajaran Dosen</button>
+        <button class="tab-button" data-tab="grouped-kelas">Fasilitas Kelas</button>
+      </div>
+      
+      <!-- Pembelajaran Dosen Tab -->
+      <div id="grouped-dosen" class="tab-content active">
+        {% if grouped_summary and 'pembelajaran dosen' in grouped_summary %}
+          <div class="mb-6">
+            <h3 class="text-lg font-medium mb-3 text-gray-700">Sentimen Berdasarkan Dosen Pengampu</h3>
+            <div class="table-container shadow-sm">
+              <table class="min-w-full">
+                <thead>
+                  <tr>
+                    <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">No</th>
+                    <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Nama Dosen Pengampu</th>
+                    <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Total Data</th>
+                    <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Positif</th>
+                    <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Netral</th>
+                    <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Negatif</th>
+                    <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Distribusi Sentimen</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for dosen, stats in grouped_summary['pembelajaran dosen'].items() %}
+                    <tr class="hover:bg-purple-50/30">
+                      <td class="font-medium">{{ loop.index }}</td>
+                      <td class="font-medium">{{ dosen }}</td>
+                      <td>{{ stats.total }}</td>
+                      <td>
+                        <div class="flex items-center">
+                          <span class="mr-2">{{ stats.positif }}</span>
+                          <span class="text-sm text-green-600">({{ stats.positif_percent }}%)</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="flex items-center">
+                          <span class="mr-2">{{ stats.netral }}</span>
+                          <span class="text-sm text-gray-600">({{ stats.netral_percent }}%)</span>
+                        </div>
+                      </td>
+                      <td>
+                        <div class="flex items-center">
+                          <span class="mr-2">{{ stats.negatif }}</span>
+                          <span class="text-sm text-red-600">({{ stats.negatif_percent }}%)</span>
+                        </div>
+                      </td>
+                      <td class="w-64">
+                        <div class="flex w-full h-6 rounded-full overflow-hidden">
+                          {% if stats.positif_percent > 0 %}
+                            <div class="bg-green-500 h-full">{{ stats.positif_percent }}%</div>
+                          {% endif %}
+                          {% if stats.netral_percent > 0 %}
+                            <div class="bg-gray-400 h-full">{{ stats.netral_percent }}%</div>
+                          {% endif %}
+                          {% if stats.negatif_percent > 0 %}
+                            <div class="bg-red-500 h-full">{{ stats.negatif_percent }}%</div>
+                          {% endif %}
+                        </div>
+                      </td>
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+          
+          <!-- Dosen Detail Section -->
+          <div class="mt-8">
+            <h3 class="text-lg font-medium mb-3 text-gray-700">Detail Sentimen per Dosen</h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {% for dosen, stats in grouped_summary['pembelajaran dosen'].items() %}
+                <div class="card p-4">
+                  <h4 class="font-medium text-purple-600 mb-2">{{ dosen }}</h4>
+                  <div class="flex justify-between text-sm mb-2">
+                    <span>Total: {{ stats.total }} data</span>
+                  </div>
+                  
+                  <!-- Positif -->
+                  <div class="mb-2">
+                    <div class="flex justify-between text-sm mb-1">
+                      <span class="text-green-700">Positif</span>
+                      <span class="text-green-700">{{ stats.positif_percent }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                      <div class="bg-green-500 h-2.5 rounded-full">{{ stats.positif_percent }}%</div>
+                    </div>
+                  </div>
+                  
+                  <!-- Netral -->
+                  <div class="mb-2">
+                    <div class="flex justify-between text-sm mb-1">
+                      <span class="text-gray-700">Netral</span>
+                      <span class="text-gray-700">{{ stats.netral_percent }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                      <div class="bg-gray-400 h-2.5 rounded-full">{{ stats.netral_percent }}%</div>
+                    </div>
+                  </div>
+                  
+                  <!-- Negatif -->
+                  <div class="mb-2">
+                    <div class="flex justify-between text-sm mb-1">
+                      <span class="text-red-700">Negatif</span>
+                      <span class="text-red-700">{{ stats.negatif_percent }}%</span>
+                    </div>
+                    <div class="w-full bg-gray-200 rounded-full h-2.5">
+                      <div class="bg-red-500 h-2.5 rounded-full">{{ stats.negatif_percent }}%"</div>
+                    </div>
+                  </div>
+                </div>
+              {% endfor %}
+            </div>
+          </div>
+        {% else %}
+          <div class="bg-yellow-100 p-4 rounded-lg">
+            <p class="text-yellow-700">Tidak ada data pembelajaran dosen yang tersedia.</p>
+          </div>
+        {% endif %}
+      </div>
+      
+  
+<div id="grouped-kelas" class="tab-content">
+  {% if grouped_summary and 'fasilitas kelas' in grouped_summary %}
+    {% set allowed_classrooms = [
+      "Indonesia", "Berkeley", "Lab F", "Thailand", "Lab E", "Philipphines", "Newton",
+      "Harvard", "Lab A", "Lab B", "Lab C", "Lab D", "Salesmanship", "Lab Ekonomi",
+      "Lab Jaringan", "Einstein", "302", "301", "303", "Malaysia", "India", "Deakin",
+      "Curtin", "Witconsin", "Eksekutif 2", "Eksekutif", "Chicago", "Melbourne",
+      "Wolonggong", "Tirai", "Lab Desain", "Lab Robotik", "Bengkel SK", "Lab DKV"
+    ] %}
+    
+    <div class="mb-6">
+      <h3 class="text-lg font-medium mb-3 text-gray-700">Sentimen Berdasarkan Ruang Kelas</h3>
+      <div class="table-container shadow-sm">
+        <table class="min-w-full">
+          <thead>
+            <tr>
+              <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">No</th>
+              <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Ruang Kelas</th>
+              <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Total Data</th>
+              <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Positif</th>
+              <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Netral</th>
+              <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Negatif</th>
+              <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Distribusi Sentimen</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% set counter = 1 %}
+            {% for kelas, stats in grouped_summary['fasilitas kelas'].items() %}
+              {% if kelas in allowed_classrooms %}
+                <tr class="hover:bg-purple-50/30">
+                  <td class="font-medium">{{ counter }}</td>
+                  <td class="font-medium">{{ kelas }}</td>
+                  <td>{{ stats.total }}</td>
+                  <td>
+                    <div class="flex items-center">
+                      <span class="mr-2">{{ stats.positif }}</span>
+                      <span class="text-sm text-green-600">({{ stats.positif_percent }}%)</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="flex items-center">
+                      <span class="mr-2">{{ stats.netral }}</span>
+                      <span class="text-sm text-gray-600">({{ stats.netral_percent }}%)</span>
+                    </div>
+                  </td>
+                  <td>
+                    <div class="flex items-center">
+                      <span class="mr-2">{{ stats.negatif }}</span>
+                      <span class="text-sm text-red-600">({{ stats.negatif_percent }}%)</span>
+                    </div>
+                  </td>
+                  <td class="w-64">
+                    <div class="flex w-full h-6 rounded-full overflow-hidden">
+                      {% if stats.positif_percent > 0 %}
+                        <div class="bg-green-500 h-full">{{ stats.positif_percent }}%</div>
+                      {% endif %}
+                      {% if stats.netral_percent > 0 %}
+                        <div class="bg-gray-400 h-full">{{ stats.netral_percent }}%</div>
+                      {% endif %}
+                      {% if stats.negatif_percent > 0 %}
+                        <div class="bg-red-500 h-full">{{ stats.negatif_percent }}%</div>
+                      {% endif %}
+                    </div>
+                  </td>
+                </tr>
+                {% set counter = counter + 1 %}
+              {% endif %}
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+    
+    <!-- Kelas Detail Section -->
+    <div class="mt-8">
+      <h3 class="text-lg font-medium mb-3 text-gray-700">Detail Sentimen per Ruang Kelas</h3>
+      
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for kelas, stats in grouped_summary['fasilitas kelas'].items() %}
+          {% if kelas in allowed_classrooms %}
+            <div class="card p-4">
+              <h4 class="font-medium text-purple-600 mb-2">{{ kelas }}</h4>
+              <div class="flex justify-between text-sm mb-2">
+                <span>Total: {{ stats.total }} data</span>
+              </div>
+              
+              <!-- Positif -->
+              <div class="mb-2">
+                <div class="flex justify-between text-sm mb-1">
+                  <span class="text-green-700">Positif</span>
+                  <span class="text-green-700">{{ stats.positif_percent }}%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                  <div class="bg-green-500 h-2.5 rounded-full">{{ stats.positif_percent }}%</div>
+                </div>
+              </div>
+              
+              <!-- Netral -->
+              <div class="mb-2">
+                <div class="flex justify-between text-sm mb-1">
+                  <span class="text-gray-700">Netral</span>
+                  <span class="text-gray-700">{{ stats.netral_percent }}%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                  <div class="bg-gray-400 h-2.5 rounded-full">{{ stats.netral_percent }}%</div>
+                </div>
+              </div>
+              
+              <!-- Negatif -->
+              <div class="mb-2">
+                <div class="flex justify-between text-sm mb-1">
+                  <span class="text-red-700">Negatif</span>
+                  <span class="text-red-700">{{ stats.negatif_percent }}%</span>
+                </div>
+                <div class="w-full bg-gray-200 rounded-full h-2.5">
+                  <div class="bg-red-500 h-2.5 rounded-full">{{ stats.negatif_percent }}%</div>
+                </div>
+              </div>
+            </div>
+          {% endif %}
+        {% endfor %}
+      </div>
+    </div>
+  {% else %}
+    <div class="bg-yellow-100 p-4 rounded-lg">
+      <p class="text-yellow-700">Tidak ada data fasilitas kelas yang tersedia.</p>
+    </div>
+  {% endif %}
+</div>
+    </div>
+
+    <div id="testing-data" class="tab-content">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        {% set test_positif = 0 %}
+        {% set test_netral = 0 %}
+        {% set test_negatif = 0 %}
+        {% for folder in test_summary %}
+          {% set test_positif = test_positif + test_summary[folder]['positif'] %}
+          {% set test_netral = test_netral + test_summary[folder]['netral'] %}
+          {% set test_negatif = test_negatif + test_summary[folder]['negatif'] %}
+        {% endfor %}
+
+        
+        <div class="bg-green-50 p-4 rounded-lg text-center">
+          <h3 class="text-green-700 font-medium mb-2">Sentimen Positif</h3>
+          <p class="text-3xl font-bold text-green-600">
+            {{ (test_positif / test_total * 100)|round|int if test_total > 0 else 0 }}%
+          </p>
+          <p class="text-sm text-green-600 mt-1">{{ test_positif }} dari {{ test_total }} data</p>
+        </div>
+        <div class="bg-gray-50 p-4 rounded-lg text-center">
+          <h3 class="text-gray-700 font-medium mb-2">Sentimen Netral</h3>
+          <p class="text-3xl font-bold text-gray-600">
+            {{ (test_netral / test_total * 100)|round|int if test_total > 0 else 0 }}%
+          </p>
+          <p class="text-sm text-gray-600 mt-1">{{ test_netral }} dari {{ test_total }} data</p>
+        </div>
+        <div class="bg-red-50 p-4 rounded-lg text-center">
+          <h3 class="text-red-700 font-medium mb-2">Sentimen Negatif</h3>
+          <p class="text-3xl font-bold text-red-600">
+            {{ (test_negatif / test_total * 100)|round|int if test_total > 0 else 0 }}%
+          </p>
+          <p class="text-sm text-red-600 mt-1">{{ test_negatif }} dari {{ test_total }} data</p>
+        </div>
+      </div>
+      
+      <div class="chart-container">
+        <canvas id="sentimentChartTesting"></canvas>
+      </div>
+    </div>
+    
+    <!-- Confusion Matrix & Metrics -->
+    <div class="card p-6 mb-8">
+      <h2 class="text-xl font-semibold mb-4 text-purple-600">Confusion Matrix & Metrics (Berdasarkan Data Testing)</h2>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Confusion Matrix -->
+        <div>
+          <h3 class="text-lg font-medium mb-3 text-gray-700">Confusion Matrix</h3>
+          <div class="overflow-x-auto">
+            <table class="min-w-full border border-gray-200">
+              <thead>
+                <tr>
+                  <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700 p-3"></th>
+                  <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700 p-3" colspan="3">Predicted</th>
+                </tr>
+                <tr>
+                  <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700 p-3">Actual</th>
+                  <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700 p-3">Positif</th>
+                  <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700 p-3">Netral</th>
+                  <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700 p-3">Negatif</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th class="border-b border-r border-gray-200 bg-purple-50 text-purple-700 p-3">Positif</th>
+                  <td class="border-b border-r border-gray-200 p-3 bg-green-100 text-center font-medium">
+                    {{ confusion_matrix['positif']['positif'] }}
+                  </td>
+                  <td class="border-b border-r border-gray-200 p-3 bg-gray-50 text-center">
+                    {{ confusion_matrix['positif']['netral'] }}
+                  </td>
+                  <td class="border-b border-gray-200 p-3 bg-gray-50 text-center">
+                    {{ confusion_matrix['positif']['negatif'] }}
+                  </td>
+                </tr>
+                <tr>
+                  <th class="border-b border-r border-gray-200 bg-purple-50 text-purple-700 p-3">Netral</th>
+                  <td class="border-b border-r border-gray-200 p-3 bg-gray-50 text-center">
+                    {{ confusion_matrix['netral']['positif'] }}
+                  </td>
+                  <td class="border-b border-r border-gray-200 p-3 bg-green-100 text-center font-medium">
+                    {{ confusion_matrix['netral']['netral'] }}
+                  </td>
+                  <td class="border-b border-gray-200 p-3 bg-gray-50 text-center">
+                    {{ confusion_matrix['netral']['negatif'] }}
+                  </td>
+                </tr>
+                <tr>
+                  <th class="border-r border-gray-200 bg-purple-50 text-purple-700 p-3">Negatif</th>
+                  <td class="border-r border-gray-200 p-3 bg-gray-50 text-center">
+                    {{ confusion_matrix['negatif']['positif'] }}
+                  </td>
+                  <td class="border-r border-gray-200 p-3 bg-gray-50 text-center">
+                    {{ confusion_matrix['negatif']['netral'] }}
+                  </td>
+                  <td class="p-3 bg-green-100 text-center font-medium">
+                    {{ confusion_matrix['negatif']['negatif'] }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          
+          <div class="mt-4">
+            <p class="text-sm text-gray-600 mb-2">
+              <span class="font-medium">Accuracy:</span> {{ "%.2f"|format(metrics['accuracy'] * 100) }}%
+            </p>
+            <div class="w-full bg-gray-200 rounded-full h-2.5">
+              <div class="bg-purple-600 h-2.5 rounded-full">{{ metrics['accuracy'] * 100 }}%</div>
+            </div>
+          </div>
+        </div>
+        
+        <!-- Performance Metrics -->
+        <div>
+          <h3 class="text-lg font-medium mb-3 text-gray-700">Performance Metrics</h3>
+          <div class="overflow-x-auto">
+            <table class="min-w-full border border-gray-200">
+              <thead>
+                <tr>
+                  <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700 p-3">Class</th>
+                  <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700 p-3">Precision</th>
+                  <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700 p-3">Recall</th>
+                  <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700 p-3">F1 Score</th>
+                  <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700 p-3">Specificity</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <th class="border-b border-r border-gray-200 bg-green-50 text-green-700 p-3">Positif</th>
+                  <td class="border-b border-r border-gray-200 p-3 text-center">
+                    {{ "%.2f"|format(metrics['positif']['precision'] * 100) }}%
+                  </td>
+                  <td class="border-b border-r border-gray-200 p-3 text-center">
+                    {{ "%.2f"|format(metrics['positif']['recall'] * 100) }}%
+                  </td>
+                  <td class="border-b border-r border-gray-200 p-3 text-center">
+                    {{ "%.2f"|format(metrics['positif']['f1'] * 100) }}%
+                  </td>
+                  <td class="border-b border-gray-200 p-3 text-center">
+                    {{ "%.2f"|format(metrics['positif']['specificity'] * 100) }}%
+                  </td>
+                </tr>
+                <tr>
+                  <th class="border-b border-r border-gray-200 bg-gray-50 text-gray-700 p-3">Netral</th>
+                  <td class="border-b border-r border-gray-200 p-3 text-center">
+                    {{ "%.2f"|format(metrics['netral']['precision'] * 100) }}%
+                  </td>
+                  <td class="border-b border-r border-gray-200 p-3 text-center">
+                    {{ "%.2f"|format(metrics['netral']['recall'] * 100) }}%
+                  </td>
+                  <td class="border-b border-r border-gray-200 p-3 text-center">
+                    {{ "%.2f"|format(metrics['netral']['f1'] * 100) }}%
+                  </td>
+                  <td class="border-b border-gray-200 p-3 text-center">
+                    {{ "%.2f"|format(metrics['netral']['specificity'] * 100) }}%
+                  </td>
+                </tr>
+                <tr>
+                  <th class="border-r border-gray-200 bg-red-50 text-red-700 p-3">Negatif</th>
+                  <td class="border-r border-gray-200 p-3 text-center">
+                    {{ "%.2f"|format(metrics['negatif']['precision'] * 100) }}%
+                  </td>
+                  <td class="border-r border-gray-200 p-3 text-center">
+                    {{ "%.2f"|format(metrics['negatif']['recall'] * 100) }}%
+                  </td>
+                  <td class="border-r border-gray-200 p-3 text-center">
+                    {{ "%.2f"|format(metrics['negatif']['f1'] * 100) }}%
+                  </td>
+                  <td class="p-3 text-center">
+                    {{ "%.2f"|format(metrics['negatif']['specificity'] * 100) }}%
+                  </td>
+                </tr>
+                <tr>
+                  <th class="border-r border-gray-200 bg-purple-50 text-purple-700 p-3">Macro Avg</th>
+                  <td class="border-r border-gray-200 p-3 text-center font-medium">
+                    {{ "%.2f"|format(metrics['macro']['precision'] * 100) }}%
+                  </td>
+                  <td class="border-r border-gray-200 p-3 text-center font-medium">
+                    {{ "%.2f"|format(metrics['macro']['recall'] * 100) }}%
+                  </td>
+                  <td class="border-r border-gray-200 p-3 text-center font-medium">
+                    {{ "%.2f"|format(metrics['macro']['f1'] * 100) }}%
+                  </td>
+                  <td class="p-3 text-center font-medium">
+                    {{ "%.2f"|format(metrics['macro']['specificity'] * 100) }}%
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+      
+      <!-- Metric Formulas -->
+      <div class="mt-8">
+        <h3 class="text-lg font-medium mb-3 text-gray-700">Metric Formulas</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <h4 class="font-medium text-purple-600 mb-2">Accuracy</h4>
+            <p class="text-sm text-gray-600 mb-1">Percentage of correctly classified instances:</p>
+            <div class="bg-white p-2 rounded border border-gray-200">
+              <code class="text-sm">Accuracy = (TP + TN) / (TP + TN + FP + FN)</code>
+            </div>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <h4 class="font-medium text-purple-600 mb-2">Precision</h4>
+            <p class="text-sm text-gray-600 mb-1">Ability of the classifier not to label a negative sample as positive:</p>
+            <div class="bg-white p-2 rounded border border-gray-200">
+              <code class="text-sm">Precision = TP / (TP + FP)</code>
+            </div>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <h4 class="font-medium text-purple-600 mb-2">Recall (Sensitivity)</h4>
+            <p class="text-sm text-gray-600 mb-1">Ability of the classifier to find all positive samples:</p>
+            <div class="bg-white p-2 rounded border border-gray-200">
+              <code class="text-sm">Recall = TP / (TP + FN)</code>
+            </div>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <h4 class="font-medium text-purple-600 mb-2">F1 Score</h4>
+            <p class="text-sm text-gray-600 mb-1">Harmonic mean of precision and recall:</p>
+            <div class="bg-white p-2 rounded border border-gray-200">
+              <code class="text-sm">F1 = 2 * (Precision * Recall) / (Precision + Recall)</code>
+            </div>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <h4 class="font-medium text-purple-600 mb-2">Specificity</h4>
+            <p class="text-sm text-gray-600 mb-1">Ability of the classifier to identify negative samples:</p>
+            <div class="bg-white p-2 rounded border border-gray-200">
+              <code class="text-sm">Specificity = TN / (TN + FP)</code>
+            </div>
+          </div>
+          
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <h4 class="font-medium text-purple-600 mb-2">Confusion Matrix</h4>
+            <p class="text-sm text-gray-600 mb-1">Table showing prediction results vs actual values:</p>
+            <div class="bg-white p-2 rounded border border-gray-200">
+              <code class="text-sm">
+                TP = True Positive (correctly predicted positive)<br>
+                TN = True Negative (correctly predicted negative)<br>
+                FP = False Positive (incorrectly predicted positive)<br>
+                FN = False Negative (incorrectly predicted negative)
+              </code>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Naive Bayes Method -->
+    <div class="card p-6 mb-8">
+      <h2 class="text-xl font-semibold mb-4 text-purple-600">Metode Naive Bayes</h2>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <div>
+          <h3 class="text-lg font-medium mb-3 text-gray-700">Penjelasan Metode</h3>
+          <p class="text-gray-600 mb-4">
+            Naive Bayes adalah metode klasifikasi probabilistik berdasarkan Teorema Bayes dengan asumsi independensi antar fitur. 
+            Meskipun asumsi ini sering tidak realistis (karena itu disebut "naive"), metode ini tetap efektif untuk banyak kasus nyata.
+          </p>
+          
+          <h4 class="font-medium text-purple-600 mb-2">Teorema Bayes</h4>
+          <div class="bg-gray-50 p-4 rounded-lg mb-4">
+            <p class="text-center mb-2">
+              <code class="text-lg">P(A|B) = \frac{P(B|A) \times P(A)}{P(B)}</code>
+            </p>
+            <p class="text-sm text-gray-600">
+              Dimana:<br>
+              P(A|B) = Probabilitas posterior - probabilitas kelas A terjadi setelah bukti B diamati<br>
+              P(B|A) = Likelihood - probabilitas bukti B terjadi jika kelas A benar<br>
+              P(A) = Prior - probabilitas awal kelas A<br>
+              P(B) = Probabilitas bukti B terjadi
+            </p>
+          </div>
+          
+          <h4 class="font-medium text-purple-600 mb-2">Untuk Analisis Sentimen</h4>
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <p class="text-sm text-gray-600">
+              Dalam konteks analisis sentimen:<br>
+              - A adalah kelas sentimen (positif, netral, negatif)<br>
+              - B adalah kata-kata dalam teks<br>
+              - Kita menghitung P(sentimen|teks) untuk setiap kelas sentimen<br>
+              - Kelas dengan nilai P(sentimen|teks) tertinggi dipilih sebagai hasil klasifikasi
+            </p>
+          </div>
+        </div>
+        
+        <div>
+          <h3 class="text-lg font-medium mb-3 text-gray-700">Implementasi</h3>
+          
+          <h4 class="font-medium text-purple-600 mb-2">Langkah-langkah Algoritma</h4>
+          <ol class="list-decimal list-inside space-y-2 text-gray-600 mb-4">
+            <li>Preprocessing teks (lowercase, hapus tanda baca, tokenisasi)</li>
+            <li>Hitung kemunculan kata dalam kamus sentimen untuk setiap kelas</li>
+            <li>Hitung probabilitas prior untuk setiap kelas sentimen</li>
+            <li>Hitung likelihood dengan smoothing Laplace</li>
+            <li>Hitung probabilitas posterior untuk setiap kelas</li>
+            <li>Pilih kelas dengan probabilitas posterior tertinggi</li>
+          </ol>
+          
+          <h4 class="font-medium text-purple-600 mb-2">Rumus Naive Bayes untuk Teks</h4>
+          <div class="bg-gray-50 p-4 rounded-lg mb-4">
+            <p class="text-center mb-2">
+              <code class="text-lg">P(c|d) \propto P(c) \prod_{i=1}^{n} P(w_i|c)</code>
+            </p>
+            <p class="text-sm text-gray-600">
+              Dimana:<br>
+              P(c|d) = Probabilitas kelas c untuk dokumen d<br>
+              P(c) = Probabilitas prior kelas c<br>
+              P(w_i|c) = Probabilitas kata w_i muncul dalam kelas c<br>
+              n = Jumlah kata dalam dokumen
+            </p>
+          </div>
+          
+          <h4 class="font-medium text-purple-600 mb-2">Smoothing Laplace</h4>
+          <div class="bg-gray-50 p-4 rounded-lg">
+            <p class="text-center mb-2">
+              <code class="text-lg">P(w_i|c) = \frac{count(w_i, c) + \alpha}{count(c) + \alpha \times |V|}</code>
+            </p>
+            <p class="text-sm text-gray-600">
+              Dimana:<br>
+              count(w_i, c) = Jumlah kemunculan kata w_i dalam kelas c<br>
+              count(c) = Jumlah total kata dalam kelas c<br>
+              |V| = Ukuran vocabulary (jumlah kata unik)<br>
+              α = Parameter smoothing (biasanya 1)
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Tampilkan data per folder dengan sentimen -->
+    {% if sentiment_results %}
+      <div class="grid grid-cols-1 gap-8">
+        {% for folder_name, folder_data in sentiment_results.items() %}
+          <div class="card p-6">
+            <h2 class="text-xl font-semibold mb-4 text-purple-600">{{ folder_name }}</h2>
+            
+            <div class="flex mb-4 border-b">
+              <button class="tab-button active" data-tab="all-data-{{ folder_name|lower|replace(' ', '-') }}">Semua Data</button>
+              <button class="tab-button" data-tab="training-data-{{ folder_name|lower|replace(' ', '-') }}">Data Training (80%)</button>
+              <button class="tab-button" data-tab="testing-data-{{ folder_name|lower|replace(' ', '-') }}">Data Testing (20%)</button>
+            </div>
+            
+            <!-- All Data Tab -->
+            <div id="all-data-{{ folder_name|lower|replace(' ', '-') }}" class="tab-content active">
+              {% if folder_name|lower == 'fasilitas kelas' %}
+                <div class="table-container shadow-sm">
+                  <table class="min-w-full">
+                    <thead>
+                      <tr>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">No</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Dataset</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Ruang Kelas</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Kritik Saran</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Sentimen</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Probabilitas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for item in folder_data %}
+                        <tr class="hover:bg-purple-50/30">
+                          <td class="font-medium">{{ loop.index }}</td>
+                          <td>
+                            {% if item['dataset'] == 'training' %}
+                              <span class="dataset-badge dataset-training">Training</span>
+                            {% else %}
+                              <span class="dataset-badge dataset-testing">Testing</span>
+                            {% endif %}
+                          </td>
+                          <td>{{ item['Ruang Kelas'] }}</td>
+                          <td>{{ item['Kritik dan Saran'] }}</td>
+                          <td>
+                            {% if item['sentiment'] == 'positif' %}
+                              <span class="sentiment-positif">Positif</span>
+                            {% elif item['sentiment'] == 'netral' %}
+                              <span class="sentiment-netral">Netral</span>
+                            {% else %}
+                              <span class="sentiment-negatif">Negatif</span>
+                            {% endif %}
+                          </td>
+                          <td>
+                            <div class="w-full">
+                              <div class="flex justify-between text-xs mb-1">
+                                <span>Positif: {{ "%.1f"|format(item['probabilities']['positif'] * 100) }}%</span>
+                                <span>Netral: {{ "%.1f"|format(item['probabilities']['netral'] * 100) }}%</span>
+                                <span>Negatif: {{ "%.1f"|format(item['probabilities']['negatif'] * 100) }}%</span>
+                              </div>
+                              <div class="flex w-full gap-1">
+                                <div class="probability-bar probability-bar-positif">{{ item['probabilities']['positif'] * 100 }}%</div>
+                                <div class="probability-bar probability-bar-netral">{{ item['probabilities']['netral'] * 100 }}%</div>
+                                <div class="probability-bar probability-bar-negatif">{{ item['probabilities']['negatif'] * 100 }}%</div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+                
+              {% elif folder_name|lower == 'pembelajaran dosen' %}
+                <div class="table-container shadow-sm">
+                  <table class="min-w-full">
+                    <thead>
+                      <tr>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">No</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Dataset</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Nama Dosen Pengampu</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Kritik Saran</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Sentimen</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Probabilitas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for item in folder_data %}
+                        <tr class="hover:bg-purple-50/30">
+                          <td class="font-medium">{{ loop.index }}</td>
+                          <td>
+                            {% if item['dataset'] == 'training' %}
+                              <span class="dataset-badge dataset-training">Training</span>
+                            {% else %}
+                              <span class="dataset-badge dataset-testing">Testing</span>
+                            {% endif %}
+                          </td>
+                          <td>{{ item['Nama Dosen Pengampu'] }}</td>
+                          <td>{{ item['Kritik dan Saran'] }}</td>
+                          <td>
+                            {% if item['sentiment'] == 'positif' %}
+                              <span class="sentiment-positif">Positif</span>
+                            {% elif item['sentiment'] == 'netral' %}
+                              <span class="sentiment-netral">Netral</span>
+                            {% else %}
+                              <span class="sentiment-negatif">Negatif</span>
+                            {% endif %}
+                          </td>
+                          <td>
+                            <div class="w-full">
+                              <div class="flex justify-between text-xs mb-1">
+                                <span>Positif: {{ "%.1f"|format(item['probabilities']['positif'] * 100) }}%</span>
+                                <span>Netral: {{ "%.1f"|format(item['probabilities']['netral'] * 100) }}%</span>
+                                <span>Negatif: {{ "%.1f"|format(item['probabilities']['negatif'] * 100) }}%</span>
+                              </div>
+                              <div class="flex w-full gap-1">
+                                <div class="probability-bar probability-bar-positif">{{ item['probabilities']['positif'] * 100 }}%</div>
+                                <div class="probability-bar probability-bar-netral">{{ item['probabilities']['netral'] * 100 }}%"</div>
+                                <div class="probability-bar probability-bar-negatif">{{ item['probabilities']['negatif'] * 100 }}%</div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% else %}
+                <div class="bg-yellow-100 p-4 rounded-lg">
+                  <p class="text-yellow-700">Format data untuk folder ini tidak dikenali.</p>
+                </div>
+              {% endif %}
+            </div>
+            
+            <!-- Training Data Tab -->
+            <div id="training-data-{{ folder_name|lower|replace(' ', '-') }}" class="tab-content">
+              {% if folder_name|lower == 'fasilitas kelas' %}
+                <div class="table-container shadow-sm">
+                  <table class="min-w-full">
+                    <thead>
+                      <tr>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">No</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Ruang Kelas</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Kritik Saran</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Sentimen</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Probabilitas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for item in train_results[folder_name] %}
+                        <tr class="hover:bg-purple-50/30">
+                          <td class="font-medium">{{ loop.index }}</td>
+                          <td>{{ item['Ruang Kelas'] }}</td>
+                          <td>{{ item['Kritik dan Saran'] }}</td>
+                          <td>
+                            {% if item['sentiment'] == 'positif' %}
+                              <span class="sentiment-positif">Positif</span>
+                            {% elif item['sentiment'] == 'netral' %}
+                              <span class="sentiment-netral">Netral</span>
+                            {% else %}
+                              <span class="sentiment-negatif">Negatif</span>
+                            {% endif %}
+                          </td>
+                          <td>
+                            <div class="w-full">
+                              <div class="flex justify-between text-xs mb-1">
+                                <span>Positif: {{ "%.1f"|format(item['probabilities']['positif'] * 100) }}%</span>
+                                <span>Netral: {{ "%.1f"|format(item['probabilities']['netral'] * 100) }}%</span>
+                                <span>Negatif: {{ "%.1f"|format(item['probabilities']['negatif'] * 100) }}%</span>
+                              </div>
+                              <div class="flex w-full gap-1">
+                                <div class="probability-bar probability-bar-positif">{{ item['probabilities']['positif'] * 100 }}%</div>
+                                <div class="probability-bar probability-bar-netral">{{ item['probabilities']['netral'] * 100 }}%"</div>
+                                <div class="probability-bar probability-bar-negatif">{{ item['probabilities']['negatif'] * 100 }}%</div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+                
+              {% elif folder_name|lower == 'pembelajaran dosen' %}
+                <div class="table-container shadow-sm">
+                  <table class="min-w-full">
+                    <thead>
+                      <tr>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">No</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Nama Dosen Pengampu</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Kritik Saran</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Sentimen</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Probabilitas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for item in train_results[folder_name] %}
+                        <tr class="hover:bg-purple-50/30">
+                          <td class="font-medium">{{ loop.index }}</td>
+                          <td>{{ item['Nama Dosen Pengampu'] }}</td>
+                          <td>{{ item['Kritik dan Saran'] }}</td>
+                          <td>
+                            {% if item['sentiment'] == 'positif' %}
+                              <span class="sentiment-positif">Positif</span>
+                            {% elif item['sentiment'] == 'netral' %}
+                              <span class="sentiment-netral">Netral</span>
+                            {% else %}
+                              <span class="sentiment-negatif">Negatif</span>
+                            {% endif %}
+                          </td>
+                          <td>
+                            <div class="w-full">
+                              <div class="flex justify-between text-xs mb-1">
+                                <span>Positif: {{ "%.1f"|format(item['probabilities']['positif'] * 100) }}%</span>
+                                <span>Netral: {{ "%.1f"|format(item['probabilities']['netral'] * 100) }}%</span>
+                                <span>Negatif: {{ "%.1f"|format(item['probabilities']['negatif'] * 100) }}%</span>
+                              </div>
+                              <div class="flex w-full gap-1">
+                                <div class="probability-bar probability-bar-positif">{{ item['probabilities']['positif'] * 100 }}%</div>
+                                <div class="probability-bar probability-bar-netral">{{ item['probabilities']['netral'] * 100 }}%</div>
+                                <div class="probability-bar probability-bar-negatif">{{ item['probabilities']['negatif'] * 100 }}%</div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% endif %}
+            </div>
+            
+            <!-- Testing Data Tab -->
+            <div id="testing-data-{{ folder_name|lower|replace(' ', '-') }}" class="tab-content">
+              {% if folder_name|lower == 'fasilitas kelas' %}
+                <div class="table-container shadow-sm">
+                  <table class="min-w-full">
+                    <thead>
+                      <tr>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">No</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Ruang Kelas</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Kritik Saran</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Sentimen</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Probabilitas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for item in test_results[folder_name] %}
+                        <tr class="hover:bg-purple-50/30">
+                          <td class="font-medium">{{ loop.index }}</td>
+                          <td>{{ item['Ruang Kelas'] }}</td>
+                          <td>{{ item['Kritik dan Saran'] }}</td>
+                          <td>
+                            {% if item['sentiment'] == 'positif' %}
+                              <span class="sentiment-positif">Positif</span>
+                            {% elif item['sentiment'] == 'netral' %}
+                              <span class="sentiment-netral">Netral</span>
+                            {% else %}
+                              <span class="sentiment-negatif">Negatif</span>
+                            {% endif %}
+                          </td>
+                          <td>
+                            <div class="w-full">
+                              <div class="flex justify-between text-xs mb-1">
+                                <span>Positif: {{ "%.1f"|format(item['probabilities']['positif'] * 100) }}%</span>
+                                <span>Netral: {{ "%.1f"|format(item['probabilities']['netral'] * 100) }}%</span>
+                                <span>Negatif: {{ "%.1f"|format(item['probabilities']['negatif'] * 100) }}%</span>
+                              </div>
+                              <div class="flex w-full gap-1">
+                                <div class="probability-bar probability-bar-positif">{{ item['probabilities']['positif'] * 100 }}%</div>
+                                <div class="probability-bar probability-bar-netral">{{ item['probabilities']['netral'] * 100 }}%</div>
+                                <div class="probability-bar probability-bar-negatif">{{ item['probabilities']['negatif'] * 100 }}%</div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+                
+              {% elif folder_name|lower == 'pembelajaran dosen' %}
+                <div class="table-container shadow-sm">
+                  <table class="min-w-full">
+                    <thead>
+                      <tr>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">No</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Nama Dosen Pengampu</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Kritik Saran</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Sentimen</th>
+                        <th class="border-b-2 border-purple-200 bg-purple-50 text-purple-700">Probabilitas</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {% for item in test_results[folder_name] %}
+                        <tr class="hover:bg-purple-50/30">
+                          <td class="font-medium">{{ loop.index }}</td>
+                          <td>{{ item['Nama Dosen Pengampu'] }}</td>
+                          <td>{{ item['Kritik dan Saran'] }}</td>
+                          <td>
+                            {% if item['sentiment'] == 'positif' %}
+                              <span class="sentiment-positif">Positif</span>
+                            {% elif item['sentiment'] == 'netral' %}
+                              <span class="sentiment-netral">Netral</span>
+                            {% else %}
+                              <span class="sentiment-negatif">Negatif</span>
+                            {% endif %}
+                          </td>
+                          <td>
+                            <div class="w-full">
+                              <div class="flex justify-between text-xs mb-1">
+                                <span>Positif: {{ "%.1f"|format(item['probabilities']['positif'] * 100) }}%</span>
+                                <span>Netral: {{ "%.1f"|format(item['probabilities']['netral'] * 100) }}%</span>
+                                <span>Negatif: {{ "%.1f"|format(item['probabilities']['negatif'] * 100) }}%</span>
+                              </div>
+                              <div class="flex w-full gap-1">
+                                <div class="probability-bar probability-bar-positif">{{ item['probabilities']['positif'] * 100 }}%</div>
+                                <div class="probability-bar probability-bar-netral">{{ item['probabilities']['netral'] * 100 }}%</div>
+                                <div class="probability-bar probability-bar-negatif">{{ item['probabilities']['negatif'] * 100 }}%</div>
+                              </div>
+                            </div>
+                          </td>
+                        </tr>
+                      {% endfor %}
+                    </tbody>
+                  </table>
+                </div>
+              {% endif %}
+            </div>
+            
+            <div class="mt-4 flex justify-between items-center">
+              <p class="text-sm text-gray-500">Total data: {{ summary[folder_name].total }} baris</p>
+              
+              <div class="flex space-x-4">
+                <div class="flex items-center">
+                  <span class="w-3 h-3 rounded-full bg-green-500 mr-2"></span>
+                  <span class="text-sm text-gray-600">Positif: {{ summary[folder_name].positif_percent }}%</span>
+                </div>
+                <div class="flex items-center">
+                  <span class="w-3 h-3 rounded-full bg-gray-400 mr-2"></span>
+                  <span class="text-sm text-gray-600">Netral: {{ summary[folder_name].netral_percent }}%</span>
+                </div>
+                <div class="flex items-center">
+                  <span class="w-3 h-3 rounded-full bg-red-500 mr-2"></span>
+                  <span class="text-sm text-gray-600">Negatif: {{ summary[folder_name].negatif_percent }}%</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="bg-red-100 p-4 rounded-lg card">
+        <p class="text-red-700">Tidak ada data yang tersedia untuk dianalisis.</p>
+      </div>
+    {% endif %}
+  </div>
+  
+  <script>
+  // Fungsi untuk export ke Excel
+function exportToExcel() {
+  alert('Fitur export Excel akan segera tersedia');
+}
+
+// Tab functionality
+document.addEventListener('DOMContentLoaded', function() {
+  // Get all tab buttons
+  const tabButtons = document.querySelectorAll('.tab-button');
+  
+  // Add click event to each tab button
+  tabButtons.forEach(button => {
+    button.addEventListener('click', function() {
+      // Get the tab ID from data-tab attribute
+      const tabId = this.getAttribute('data-tab');
+      
+      // Get the parent element to find related tabs and contents
+      const parentElement = this.closest('.card');
+      
+      // Remove active class from all buttons and contents in this group
+      parentElement.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      parentElement.querySelectorAll('.tab-content').forEach(content => {
+        content.classList.remove('active');
+      });
+      
+      // Add active class to clicked button and related content
+      this.classList.add('active');
+      document.getElementById(tabId).classList.add('active');
+    });
+  });
+
+  // Initialize all charts
+  initCharts();
+});
+
+function exportTabelToPDF() {
+  // Buat jendela baru untuk konten cetak
+  const printWindow = window.open('', '_blank');
+  
+  // Tambahkan CSS yang diperlukan dengan desain yang lebih cantik
+  printWindow.document.write(`
+    <html>
+    <head>
+      <title>Data Sentimen - Tabel</title>
+      <style>
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body {
+          font-family: 'Poppins', sans-serif;
+          padding: 30px;
+          color: #333;
+          background-color: #FAFAFA;
+          line-height: 1.6;
+        }
+        
+        .container {
+          background-color: white;
+          border-radius: 12px;
+          box-shadow: 0 4px 10px rgba(0, 0, 0, 0.05);
+          padding: 25px;
+          margin-bottom: 30px;
+        }
+        
+        h3 {
+          color: #7C3AED;
+          margin-bottom: 20px;
+          font-weight: 600;
+          font-size: 20px;
+          text-align: center;
+          border-bottom: 2px solid #EDE9FE;
+          padding-bottom: 10px;
+        }
+        
+        .subtitle {
+          text-align: center;
+          color: #6B7280;
+          margin-bottom: 20px;
+          font-size: 14px;
+        }
+        
+        table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 30px;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+        }
+        
+        thead {
+          background-color: #7C3AED;
+        }
+        
+        th {
+          color: #FFFFFF;
+          padding: 12px 15px;
+          text-align: left;
+          font-weight: 500;
+          text-transform: uppercase;
+          font-size: 13px;
+          letter-spacing: 0.5px;
+        }
+        
+        tr:nth-child(even) {
+          background-color: #F9FAFB;
+        }
+        
+        td {
+          padding: 12px 15px;
+          border-bottom: 1px solid #E5E7EB;
+          font-size: 14px;
+        }
+        
+        tr:hover {
+          background-color: #F3F4F6;
+        }
+        
+        .progress-container {
+          width: 100%;
+          height: 20px;
+          border-radius: 10px;
+          background-color: #F3F4F6;
+          overflow: hidden;
+          display: flex;
+        }
+        
+        .progress-positive {
+          background-color: #10B981;
+          height: 100%;
+          color: white;
+          text-align: center;
+          font-size: 12px;
+          line-height: 20px;
+          font-weight: 500;
+        }
+        
+        .progress-neutral {
+          background-color: #9CA3AF;
+          height: 100%;
+          color: white;
+          text-align: center;
+          font-size: 12px;
+          line-height: 20px;
+          font-weight: 500;
+        }
+        
+        .progress-negative {
+          background-color: #EF4444;
+          height: 100%;
+          color: white;
+          text-align: center;
+          font-size: 12px;
+          line-height: 20px;
+          font-weight: 500;
+        }
+        
+        .text-green { color: #10B981; font-weight: 500; }
+        .text-gray { color: #6B7280; font-weight: 500; }
+        .text-red { color: #EF4444; font-weight: 500; }
+        
+        .page-break {
+          page-break-after: always;
+        }
+        
+        .footer {
+          text-align: center;
+          margin-top: 20px;
+          color: #9CA3AF;
+          font-size: 12px;
+        }
+        
+        .data-row {
+          display: flex;
+          align-items: center;
+        }
+        
+        .value {
+          font-weight: 500;
+          margin-right: 5px;
+        }
+        
+        .percentage {
+          font-size: 12px;
+        }
+        
+        @media print {
+          body {
+            padding: 0;
+            background-color: white;
+          }
+          
+          .container {
+            box-shadow: none;
+            padding: 0;
+            margin-bottom: 20px;
+          }
+          
+          table {
+            box-shadow: none;
+          }
+          
+          .page-break {
+            page-break-after: always;
+          }
+        }
+      </style>
+    </head>
+    <body>
+  `);
+  
+  // Ambil tabel dosen dan perbaiki tampilannya
+  const dosenTableContainer = document.querySelector('#grouped-dosen .table-container');
+  if (dosenTableContainer) {
+    const dosenTableHTML = dosenTableContainer.innerHTML;
+    
+    // Transform distribusi sentimen bars
+    const enhancedDosenTableHTML = dosenTableHTML
+      .replace(/class="flex w-full h-6 rounded-full overflow-hidden"/g, 'class="progress-container"')
+      .replace(/class="bg-green-500 h-full"/g, 'class="progress-positive"')
+      .replace(/class="bg-gray-400 h-full"/g, 'class="progress-neutral"')
+      .replace(/class="bg-red-500 h-full"/g, 'class="progress-negative"')
+      .replace(/class="flex items-center"/g, 'class="data-row"')
+      .replace(/class="mr-2"/g, 'class="value"')
+      .replace(/class="text-sm text-green-600"/g, 'class="percentage text-green"')
+      .replace(/class="text-sm text-gray-600"/g, 'class="percentage text-gray"')
+      .replace(/class="text-sm text-red-600"/g, 'class="percentage text-red"');
+    
+    printWindow.document.write(`
+      <div class="container">
+        <h3>Sentimen Berdasarkan Dosen Pengampu</h3>
+        <div class="subtitle">Analisis sentimen berdasarkan evaluasi pembelajaran masing-masing dosen</div>
+        ${enhancedDosenTableHTML}
+      </div>
+      <div class="page-break"></div>
+    `);
+  }
+  
+  // Ambil tabel kelas dan perbaiki tampilannya
+  const kelasTableContainer = document.querySelector('#grouped-kelas .table-container');
+  if (kelasTableContainer) {
+    const kelasTableHTML = kelasTableContainer.innerHTML;
+    
+    // Transform distribusi sentimen bars
+    const enhancedKelasTableHTML = kelasTableHTML
+      .replace(/class="flex w-full h-6 rounded-full overflow-hidden"/g, 'class="progress-container"')
+      .replace(/class="bg-green-500 h-full"/g, 'class="progress-positive"')
+      .replace(/class="bg-gray-400 h-full"/g, 'class="progress-neutral"')
+      .replace(/class="bg-red-500 h-full"/g, 'class="progress-negative"')
+      .replace(/class="flex items-center"/g, 'class="data-row"')
+      .replace(/class="mr-2"/g, 'class="value"')
+      .replace(/class="text-sm text-green-600"/g, 'class="percentage text-green"')
+      .replace(/class="text-sm text-gray-600"/g, 'class="percentage text-gray"')
+      .replace(/class="text-sm text-red-600"/g, 'class="percentage text-red"');
+    
+    printWindow.document.write(`
+      <div class="container">
+        <h3>Sentimen Berdasarkan Ruang Kelas</h3>
+        <div class="subtitle">Analisis sentimen berdasarkan evaluasi terhadap fasilitas masing-masing ruang kelas</div>
+        ${enhancedKelasTableHTML}
+      </div>
+    `);
+  }
+  
+  // Tambahkan footer
+  printWindow.document.write(`
+    <div class="footer">
+      Data Sentimen | Diekspor pada ${new Date().toLocaleDateString('id-ID', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      })}
+    </div>
+  `);
+  
+  // Tutup dokumen dan picu cetak
+  printWindow.document.write('</body></html>');
+  printWindow.document.close();
+  
+  // Tunggu konten dimuat lalu cetak
+  printWindow.addEventListener('load', function() {
+    printWindow.focus();
+    setTimeout(function() {
+      printWindow.print();
+    }, 500);
+  });
+}
+// Initialize all charts
+function initCharts() {
+  // All data chart
+  const ctxAll = document.getElementById('sentimentChartAll');
+  if (ctxAll) {
+    const allCtx = ctxAll.getContext('2d');
+    new Chart(allCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Positif', 'Netral', 'Negatif'],
+        datasets: [{
+          data: [
+            /* {{ overall_summary.positif_percent }}, 
+               {{ overall_summary.netral_percent }}, 
+               {{ overall_summary.negatif_percent }} */
+            // Replace template variables with actual values or use data attributes
+            parseInt(ctxAll.dataset.positif || 0),
+            parseInt(ctxAll.dataset.netral || 0),
+            parseInt(ctxAll.dataset.negatif || 0)
+          ],
+          backgroundColor: [
+            '#22c55e', // green
+            '#94a3b8', // gray
+            '#ef4444'  // red
+          ],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return context.label + ': ' + context.raw + '%';
+              }
+            }
+          }
+        },
+        cutout: '70%'
+      }
+    });
+  }
+  
+  // Training data chart
+  const ctxTraining = document.getElementById('sentimentChartTraining');
+  if (ctxTraining) {
+    const trainingCtx = ctxTraining.getContext('2d');
+    
+    new Chart(trainingCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Positif', 'Netral', 'Negatif'],
+        datasets: [{
+          data: [
+            // Replace template variables with data attributes
+            parseInt(ctxTraining.dataset.positif || 0),
+            parseInt(ctxTraining.dataset.netral || 0),
+            parseInt(ctxTraining.dataset.negatif || 0)
+          ],
+          backgroundColor: [
+            '#22c55e', // green
+            '#94a3b8', // gray
+            '#ef4444'  // red
+          ],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return context.label + ': ' + context.raw + '%';
+              }
+            }
+          }
+        },
+        cutout: '70%'
+      }
+    });
+  }
+  
+  // Testing data chart
+  const ctxTesting = document.getElementById('sentimentChartTesting');
+  if (ctxTesting) {
+    const testingCtx = ctxTesting.getContext('2d');
+    
+    new Chart(testingCtx, {
+      type: 'doughnut',
+      data: {
+        labels: ['Positif', 'Netral', 'Negatif'],
+        datasets: [{
+          data: [
+            // Replace template variables with data attributes
+            parseInt(ctxTesting.dataset.positif || 0),
+            parseInt(ctxTesting.dataset.netral || 0),
+            parseInt(ctxTesting.dataset.negatif || 0)
+          ],
+          backgroundColor: [
+            '#22c55e', // green
+            '#94a3b8', // gray
+            '#ef4444'  // red
+          ],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            position: 'bottom'
+          },
+          tooltip: {
+            callbacks: {
+              label: function(context) {
+                return context.label + ': ' + context.raw + '%';
+              }
+            }
+          }
+        },
+        cutout: '70%'
+      }
+    });
+  }
+}
+  </script>
+</body>
+</html>

@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Upload Dataset via Google Drive</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script src="https://apis.google.com/js/api.js"></script>
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    .file-drop-area {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      padding: 2.5rem;
+      border: 2px dashed #d1d5db;
+      border-radius: 0.75rem;
+      background-color: #ffffff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .file-drop-area:hover {
+      border-color: #a855f7;
+    }
+    .file-msg {
+      font-size: 1rem;
+      color: #6b7280;
+      text-align: center;
+      margin-top: 0.5rem;
+    }
+    .upload-icon {
+      margin-bottom: 1rem;
+    }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
+    .card {
+      background-color: white;
+      border-radius: 1rem;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+    }
+  </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+  <div class="container mx-auto px-4 py-10">
+    <h1 class="text-2xl font-medium text-center text-purple-500 mb-6">Upload Dataset dari Google Drive</h1>
+
+    <div class="max-w-2xl mx-auto bg-white shadow-md rounded-xl p-6 card">
+      <form action="/preview-data" method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="selected_folders" id="selectedFoldersInput">
+        <!-- Tambahkan di dalam <form> -->
+<div id="selectedFoldersContainer"></div>
+
+
+        <div id="filePicker" class="file-drop-area mb-4">
+          <!-- File icon -->
+          <div class="upload-icon">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <rect x="12" y="12" width="16" height="20" rx="2" transform="rotate(-5 12 12)" fill="#E2E8F0" stroke="#A0AEC0" stroke-width="1.5"/>
+              <rect x="24" y="10" width="16" height="20" rx="2" fill="#EDF2F7" stroke="#A0AEC0" stroke-width="1.5"/>
+              <rect x="36" y="12" width="16" height="20" rx="2" transform="rotate(5 36 12)" fill="#E2E8F0" stroke="#A0AEC0" stroke-width="1.5"/>
+            </svg>
+          </div>
+
+          <!-- Text content -->
+          <div>
+            <p class="font-medium text-gray-800">Drag & drop <span class="text-purple-500">folder</span>,</p>
+            <p class="font-medium text-gray-800"><span class="text-purple-500">excel</span>, or any <span class="text-purple-500">file</span></p>
+          </div>
+
+          <span class="file-msg mt-2 text-sm text-gray-500">or browse files in your Google Drive</span>
+        </div>
+
+        <div class="flex justify-between items-center">
+          <button type="button" onclick="resetFileSelection()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
+            Reset
+          </button>
+
+          <button type="submit" class="bg-purple-500 hover:bg-purple-600 text-white px-6 py-2 rounded-lg shadow">
+            Upload
+          </button>
+        </div>
+      </form>
+
+      <div class="mt-4 space-y-6" id="selectedFileInfo"></div>
+    </div>
+  </div>
+
+  <script>
+    // Konfigurasi Google Drive API
+const CLIENT_ID = '860832248196-ncn8ndqtlluokrve3s6tmbpd34545tc0.apps.googleusercontent.com';
+const API_KEY = 'AIzaSyAm25C_AVZAuCDmQLYVv448jtUPneD9ZXQ';
+const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
+const SCOPES = 'https://www.googleapis.com/auth/drive.readonly';
+
+let tokenClient;
+let gapiInited = false;
+let gisInited = false;
+let accessToken = null;
+let selectedFolders = {}; // Simpan file berdasarkan nama folder
+
+// Inisialisasi GAPI saat halaman dimuat
+function gapiLoaded() {
+  gapi.load('client:picker', initializeGapiClient);
+}
+
+// Inisialisasi client GAPI
+async function initializeGapiClient() {
+  await gapi.client.init({
+    apiKey: API_KEY,
+    discoveryDocs: DISCOVERY_DOCS,
+  });
+  gapiInited = true;
+  maybeEnablePicker();
+}
+
+// Inisialisasi Google Identity Services
+function gisLoaded() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (tokenResponse) => {
+      if (tokenResponse.error !== undefined) {
+        throw tokenResponse;
+      }
+      accessToken = tokenResponse.access_token;
+      maybeEnablePicker();
+    },
+  });
+  gisInited = true;
+}
+
+// Aktifkan picker jika semua kondisi terpenuhi
+function maybeEnablePicker() {
+  if (gapiInited && gisInited && accessToken) {
+    showPicker();
+  }
+}
+
+// Tampilkan picker Google Drive
+function showPicker() {
+  const view = new google.picker.DocsView(google.picker.ViewId.FOLDERS)
+    .setIncludeFolders(true)
+    .setSelectFolderEnabled(true);
+
+  const picker = new google.picker.PickerBuilder()
+    .addView(view)
+    .setOAuthToken(accessToken)
+    .setDeveloperKey(API_KEY)
+    .setCallback(pickerCallback)
+    .build();
+
+  picker.setVisible(true);
+}
+
+// Callback saat folder dipilih dari picker
+function pickerCallback(data) {
+  if (data.action === google.picker.Action.PICKED) {
+    const folderId = data.docs[0].id;
+    const folderName = data.docs[0].name;
+    
+    // Tambahkan pesan loading
+    const infoContainer = document.getElementById('selectedFileInfo');
+    infoContainer.innerHTML = `<div class="bg-blue-50 p-4 rounded-lg">
+      <p class="text-blue-700">Sedang memuat file dari folder "${folderName}"...</p>
+    </div>`;
+    
+    getFilesInFolder(folderId, folderName);
+  }
+}
+
+// Ambil semua file dari folder yang dipilih
+async function getFilesInFolder(folderId, folderName) {
+  try {
+    // Cari semua file Excel dan CSV di folder tersebut
+    const response = await gapi.client.drive.files.list({
+      q: `'${folderId}' in parents and (mimeType='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' or mimeType='application/vnd.google-apps.spreadsheet' or mimeType='text/csv') and trashed = false`,
+      fields: "files(id, name, mimeType)",
+    });
+
+    const files = response.result.files;
+    if (!files || files.length === 0) {
+      document.getElementById('selectedFileInfo').innerHTML = `<div class="bg-yellow-50 p-4 rounded-lg">
+        <p class="text-yellow-700">Tidak ada file Excel/CSV yang ditemukan di folder "${folderName}".</p>
+      </div>`;
+      return;
+    }
+
+    // Simpan file yang ditemukan berdasarkan nama folder
+    selectedFolders[folderName] = files;
+    
+    // Update UI dan form
+    updateSelectedFilesUI();
+    updateHiddenInput();
+    
+  } catch (error) {
+    console.error('Gagal mengambil file:', error);
+    document.getElementById('selectedFileInfo').innerHTML = `<div class="bg-red-50 p-4 rounded-lg">
+      <p class="text-red-700">Gagal mengambil file dari folder "${folderName}": ${error.message}</p>
+    </div>`;
+  }
+}
+
+// Update tampilan file yang dipilih
+function updateSelectedFilesUI() {
+  const container = document.getElementById('selectedFileInfo');
+  const selectedFoldersContainer = document.getElementById('selectedFoldersContainer');
+  container.innerHTML = '';
+  selectedFoldersContainer.innerHTML = '';
+  
+  // Untuk setiap folder, tampilkan nama dan file yang dipilih
+  Object.keys(selectedFolders).forEach(folderName => {
+    const files = selectedFolders[folderName];
+    
+    // Buat UI card untuk folder
+    const folderCard = document.createElement('div');
+    folderCard.className = 'bg-white p-4 rounded-lg shadow mb-4';
+    folderCard.innerHTML = `
+      <div class="flex justify-between items-center mb-2">
+        <h3 class="font-medium text-purple-600">${folderName}</h3>
+        <span class="bg-purple-100 text-purple-800 text-xs px-2 py-1 rounded-full">${files.length} file</span>
+      </div>
+      <ul class="space-y-1 text-sm text-gray-600">
+        ${files.map(file => `<li class="flex items-center">
+          <svg class="w-4 h-4 mr-2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+          </svg>
+          ${file.name}
+        </li>`).join('')}
+      </ul>
+    `;
+    container.appendChild(folderCard);
+    
+    // Buat input tersembunyi untuk form
+    files.forEach((file, index) => {
+      Object.keys(file).forEach(key => {
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = `folders[${folderName}][${index}][${key}]`;
+        input.value = file[key];
+        selectedFoldersContainer.appendChild(input);
+      });
+    });
+  });
+}
+
+// Update input tersembunyi dengan data folder yang dipilih
+function updateHiddenInput() {
+  document.getElementById('selectedFoldersInput').value = JSON.stringify(selectedFolders);
+}
+
+// Reset pilihan file
+function resetFileSelection() {
+  selectedFolders = {};
+  updateSelectedFilesUI();
+  updateHiddenInput();
+  document.getElementById('selectedFileInfo').innerHTML = '';
+}
+
+// Event listener untuk file drop area
+document.getElementById('filePicker').addEventListener('click', () => {
+  if (!accessToken) {
+    tokenClient.requestAccessToken({prompt: 'consent'});
+  } else {
+    showPicker();
+  }
+});
+
+// Tambahkan fungsi ini di script Google Drive
+
+// Simpan token ke server saat token diperoleh
+function saveTokenToServer(token) {
+  fetch('/save-token', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      access_token: token
+    })
+  })
+  .then(response => response.json())
+  .then(data => {
+    console.log('Token disimpan:', data);
+  })
+  .catch(error => {
+    console.error('Error simpan token:', error);
+  });
+}
+
+// Ubah callback di gisLoaded() untuk menyimpan token
+function gisLoaded() {
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPES,
+    callback: (tokenResponse) => {
+      if (tokenResponse.error !== undefined) {
+        throw tokenResponse;
+      }
+      accessToken = tokenResponse.access_token;
+      
+      // Simpan token ke server
+      saveTokenToServer(accessToken);
+      
+      maybeEnablePicker();
+    },
+  });
+  gisInited = true;
+}
+
+// Inisialisasi saat halaman dimuat
+window.onload = () => {
+  // Load script picker Google Drive
+  const pickerScript = document.createElement('script');
+  pickerScript.src = 'https://apis.google.com/js/api.js?onload=gapiLoaded';
+  document.body.appendChild(pickerScript);
+  
+  // Load Google Identity Services
+  const gisScript = document.createElement('script');
+  gisScript.src = 'https://accounts.google.com/gsi/client';
+  gisScript.async = true;
+  gisScript.defer = true;
+  gisScript.onload = gisLoaded;
+  document.body.appendChild(gisScript);
+  
+  // Tambahkan event untuk drag & drop
+  const dropArea = document.getElementById('filePicker');
+  dropArea.addEventListener('dragover', (e) => {
+    e.preventDefault();
+    dropArea.classList.add('bg-purple-50');
+  });
+  dropArea.addEventListener('dragleave', () => {
+    dropArea.classList.remove('bg-purple-50');
+  });
+  dropArea.addEventListener('drop', (e) => {
+    e.preventDefault();
+    if (!accessToken) {
+      tokenClient.requestAccessToken({prompt: 'consent'});
+    } else {
+      showPicker();
+    }
+  });
+};
+  </script>
+
+  <script>
+    window.gapiLoaded = gapiLoaded;
+    window.gisLoaded = gisLoaded;
+  </script>
+</body>
+</html>
